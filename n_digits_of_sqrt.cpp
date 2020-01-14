@@ -1,6 +1,17 @@
 #include<iostream>
 using namespace std;
 
+#define N 3
+
+struct big_num{
+    int *arr;
+    int len;
+    big_num(int n){
+        arr = new int[3*n];
+        len = 0;
+    }
+};
+
 int get_len(int x){
     int len = 0;
     do {
@@ -10,94 +21,154 @@ int get_len(int x){
     return len;
 }
 
-int *add_big(int *a, int sa, int*b, int sb){
-    int *tmp = new int[max(sa,sb)+1];
+big_num* to_big(int x){
+    big_num *res = new big_num(N);
+    while(x!=0){
+        res->arr[res->len] = x%10;
+        x/=10;
+        res->len++;
+    }
+    return res;
+}
+
+int is_bigger(big_num b){         //true is plus false is negative
+    if(b.len < N*2+1)return -1;
+    else if(b.len > N*2+1)return 1;
+    else if(b.arr[b.len-1] < 2)return -1;
+    else if(b.arr[b.len-1] > 2)return 1;
+    else{
+        for(int i = b.len-2; i>-1; i--){
+            if(b.arr[i] > 0)return 1;
+        }
+        return 0;
+    }
+}
+
+void del(big_num b){
+    delete[] b.arr;
+    delete &b;
+}
+
+void show(big_num b){
+    cout<<"len is "<<b.len<<endl;
+    cout<<"arr is ";
+    for(int i = b.len-1; i > -1; i--){
+        cout<<b.arr[i]<<" ";
+    }
+    cout<<endl;
+}
+
+
+big_num add(big_num &a, big_num &b, int displ=0, bool del_both = false){       //displacement(works like multiplying b times 10^displ
+    big_num res = *(new big_num(N));                //displ <= a.len
     int *other;
     int m;
-    if(sa > sb){
-        other = b;
-        for(int i = 0; i < sa; i++){
-            tmp[i] = tmp[i];
+    if(a.len > b.len){
+        other = b.arr;
+        for(int i = 0; i < a.len; i++){         //mozna tylko bo b.len
+            res.arr[i] = a.arr[i];
         }
-        m = sb;
+        res.len=a.len;
+        m = b.len;
     }
     else{
-        other = a;
-        for(int i = 0; i < sb; i++){
-            tmp[i] = b[i];
+        other = a.arr;
+        for(int i = 0; i < b.len; i++){             //mozna tylko po a.len
+            res.arr[i] = b.arr[i];
         }
-        m = sa;
+        res.len=b.len;
+        m = a.len;
     }
     int i = 0;
     int pass = 0;
-    while(i<m){
-        int sum = tmp[i] + other[i] + pass;
+    int M = max(a.len, b.len);
+    while(i<m && i+displ < M){
+        int sum = res.arr[i+displ] + other[i] + pass;
         pass = sum/10;
-        tmp[i] = sum%10;
+        res.arr[i+displ] = sum%10;
         i++;
     }
-    tmp[i] += pass;
-    return tmp;
+    while(i<m){     // if i > m skip all right
+        int sum = other[i] + pass;
+        res.arr[i+displ] = sum%10;
+        pass = sum/10;
+        i++;
+        res.len++;
+    }
+    while(i+displ<M){     // if i > m skip all right
+        int sum = res.arr[i+displ] + pass;
+        res.arr[i+displ] = sum%10;
+        pass = sum/10;
+        i++;
+    }
+
+    if(pass != 0){      //the last additional digit
+        res.len++;
+        //cout<<pass<<" "<<i<<endl;
+        res.arr[i+displ] = pass;
+    }
+    if(del_both){
+        del(a);
+        del(b);
+    }
+    return res;
 }
 
-int *mult_big_by_num(int *a, int sa, int mult){
-    int *tmp = new int[sa+1];
-    for(int i = 0; i < sa; i++){
-        tmp[i] = a[i];
-    }
-
-    int i = 0;
+big_num mult_by_int(big_num &b, int k){ // do not mult by 0
+    big_num res = *(new big_num(N));
+    res.len = b.len;
     int pass = 0;
-    while(i<sa){
-        int sum = tmp[i]*mult + pass;
+    for(int i = 0; i < b.len; i++){
+        int sum = b.arr[i]*k + pass;
+        res.arr[i] = sum%10;
+        //cout<<i<<" "<<sum<<endl;
         pass = sum/10;
-        tmp[i] = sum%10;
-        i++;
     }
-    tmp[i] += pass;
-    return tmp;
+    while(pass != 0){
+        res.len++;
+        res.arr[res.len-1] = pass%10;
+        pass/=10;
+    }
+    del(b);
+    return res;
 }
 
-int *sub_big(int *a,int*b){
-    int *tmp = new int[n+1];
-    int *other;
-    for(int i = 0; i < n; i++){
-        tmp[i] = a[i];
+big_num square(big_num b){
+    big_num res = *to_big(0);
+    show(res);
+    for(int i = 0; i < b.len; i++){
+        if(b.arr[i] == 0)continue;
+        big_num k = mult_by_int(b, b.arr[i]);
+        cout<<i<<" k ";
+        show(k);
+        if(k.len > 0)res = add(res, k, i, true);
+        show(res);
     }
+    return res;
+}
 
-    int i = 0;
-    int pass = 0;
-    while(i<n){
-        int sum = tmp[i] - b[i] + pass;
-        if(sum < 0){
-            pass = -1;
-        }
-        else if(sum > 10){
-            pass = 1;
-        }
-        else{
-            pass = 0;
-        }
-        tmp[i] = sum%10;
-        i++;
+big_num bisect(big_num b){
+    big_num res = *(new big_num(N));
+    int pass = 0;         //can only be 0 or 10
+    if(b.arr[b.len-1]>1){
+            res.len = b.len;
     }
-    tmp[i] += pass;
-    return tmp;
+    else{
+            res.len = b.len-1;
+    }
+    for(int i = b.len-1; i > -1; i--){
+        res.arr[i] = (b.arr[i]+pass)/2; //(flored)
+        pass = b.arr[i]%2 * 10;
+    }
+    return res;
 }
 
 int main(){
-    int x = 3;
-    int n = 10;
-    //cin>>n;
-    int a[3] = {3,2,3};
-    int b[3] = {1,2,8};
-    int *c = add_big(a,3,b,3);
-    for(int i = 3; i >= 0; i--){
-        cout<<c[i];
-    }
-    delete[] a;
-    delete[] b;
-    delete[] c;
-
+    big_num x = *to_big(100);
+    show(x);
+    //x = square(x);
+    x = square(x);
+    show(x);
+    del(x);
     return 0;
 }
