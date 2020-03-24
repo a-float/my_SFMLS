@@ -1,7 +1,7 @@
 #include<iostream>
 using namespace std;
 
-/*Napisac program wyznaczaj¹cy najwiekszy wspolny dzielnik 3 zadanych liczb.*/
+/*Napisac program wyznaczajacy najwiekszy wspolny dzielnik 3 zadanych liczb.*/
 
 int NWD(int a, int b){
    while(a*b!=0){
